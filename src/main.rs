@@ -23,6 +23,12 @@ fn main() {
                 .help("Display (valid) search directories and exit"),
         )
         .arg(
+            Arg::with_name("fzf")
+                .long("fzf")
+                .short("z")
+                .help("Select project to load using fzf"),
+        )
+        .arg(
             Arg::with_name("find")
                 .value_name("PROJECT-NAME")
                 .help("Name of the project to load"),
@@ -47,14 +53,22 @@ fn main() {
         let mut projs = load_all_projects(&locations).unwrap();
         projs.sort();
         for path in projs {
-            println!("{}", path.to_string_lossy());
+            println!("{}", path.file_name().unwrap().to_string_lossy());
         }
         std::process::exit(0);
     }
 
-    match find(&locations, args.value_of("find").unwrap().to_owned()).unwrap() {
-        Some(dir) => emit_shell(dir),
-        None => {}
+    if args.is_present("fzf") {
+        println!(
+            "eval $({} $({} -l | fzf))",
+            env::args().nth(0).unwrap(),
+            env::args().nth(0).unwrap(),
+        );
+        std::process::exit(0);
+    }
+
+    if let Some(proj) = args.value_of("find") {
+        emit_shell(find(&locations, proj.to_owned()).unwrap());
     }
 }
 
@@ -98,14 +112,16 @@ fn walk_dir(dir: PathBuf, find: Option<PathBuf>) -> io::Result<Vec<PathBuf>> {
     Ok(found)
 }
 
-fn emit_shell(dir: PathBuf) {
-    println!(
-        r##"cd {};
+fn emit_shell(r: Option<PathBuf>) {
+    if let Some(dir) = r {
+        println!(
+            r##"cd {};
 for i in  /etc/srcrrrc $HOME/.srcrrrc .srcrrrc ;
 do
 	test -f $i && . $i ;
 done
 "##,
-        dir.to_string_lossy()
-    );
+            dir.to_string_lossy()
+        );
+    }
 }
