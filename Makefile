@@ -36,3 +36,6 @@ install: distribution
 clean:
 	rm -rf work
 	rm -f srcrr-$(VERSION).tgz
+
+clean-all: clean
+	cargo clean
