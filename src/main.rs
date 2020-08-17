@@ -4,12 +4,21 @@ use std::io;
 use std::path::PathBuf;
 
 use clap::{App, Arg};
+use itertools::Itertools;
 
 fn main() {
     let args = App::new("srcrr")
         .setting(clap::AppSettings::DeriveDisplayOrder)
         .version(env!("CARGO_PKG_VERSION"))
         .about("load a development cli context")
+        .arg(
+            Arg::with_name("prefix")
+                .long("prefix")
+                .short("p")
+                .takes_value(true)
+                .value_name("PATH")
+                .help("Limit search to a specific directory prefix (must be in SRCPATH)"),
+        )
         .arg(
             Arg::with_name("list")
                 .long("list")
@@ -35,9 +44,12 @@ fn main() {
         )
         .get_matches();
 
+    let prefix = args.value_of("prefix");
+
     let locations: Vec<String> = env::var("SRCPATH")
         .unwrap()
         .split(":")
+        .filter(|s| if let Some(p) = &prefix { s == p } else { true })
         .filter(|s| fs::metadata(s).is_ok())
         .map(|s| s.to_owned())
         .collect();
@@ -50,11 +62,12 @@ fn main() {
     }
 
     if args.is_present("list") {
-        let mut projs = load_all_projects(&locations).unwrap();
-        projs.sort();
-        for path in projs {
-            println!("{}", path.file_name().unwrap().to_string_lossy());
-        }
+        load_all_projects(&locations)
+            .unwrap()
+            .into_iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+            .sorted()
+            .for_each(|p| println!("{}", p));
         std::process::exit(0);
     }
 

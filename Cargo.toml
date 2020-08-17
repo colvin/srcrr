@@ -1,8 +1,9 @@
 [package]
-name = "srcrrs"
+name = "srcrr"
 version = "0.1.0"
 authors = ["colvin <colvinwellborn@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 clap = "2.33.1"
+itertools = "*"
