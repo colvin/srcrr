@@ -5,17 +5,18 @@
 function src() {
 	: ${SRCRR_BIN:="srcrr"}
 	case "$1" in
-		-l)
+		-l|--list)
 			shift
 			$SRCRR_BIN -l $@
 			return;;
-		-d)	shift
+		-d|--dirs)
+			shift
 			$SRCRR_BIN -d $@
 			return;;
-		-V)
+		-V|--version)
 			$SRCRR_BIN -V
 			return;;
-		-h)
+		-h|--help)
 			$SRCRR_BIN -h
 			return;;
 	esac
