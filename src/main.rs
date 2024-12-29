@@ -46,8 +46,13 @@ fn main() {
 
     let prefix = args.value_of("prefix");
 
+    if env::var("SRCPATH").is_err() {
+        eprintln!("ERROR: the SRCPATH environment variable is not set");
+        std::process::exit(1);
+    }
+
     let locations: Vec<String> = env::var("SRCPATH")
-        .unwrap()
+        .expect("SRCPATH environment variable not set")
         .split(":")
         .filter(|s| if let Some(p) = &prefix { s == p } else { true })
         .filter(|s| fs::metadata(s).is_ok())
