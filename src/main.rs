@@ -134,7 +134,7 @@ fn emit_shell(r: Option<PathBuf>) {
     if let Some(dir) = r {
         println!(
             r##"cd {};
-for i in  /etc/srcrrrc $HOME/.srcrrrc .srcrrrc ;
+for i in  /etc/srcrrrc $HOME/.srcrrrc ./.srcrrrc ;
 do
 	test -f $i && . $i ;
 done
