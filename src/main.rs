@@ -67,7 +67,7 @@ fn main() {
 
     if args.is_present("dirs") {
         for loc in locations {
-            println!("{}", loc);
+            println!("{loc}");
         }
         std::process::exit(0);
     }
@@ -78,15 +78,15 @@ fn main() {
             .into_iter()
             .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
             .sorted()
-            .for_each(|p| println!("{}", p));
+            .for_each(|p| println!("{p}"));
         std::process::exit(0);
     }
 
     if args.is_present("fzf") {
         println!(
             "eval $({} $({} -l | fzf))",
-            env::args().nth(0).unwrap(),
-            env::args().nth(0).unwrap(),
+            env::args().next().unwrap(),
+            env::args().next().unwrap(),
         );
         std::process::exit(0);
     }
@@ -109,13 +109,13 @@ fn load_all_projects(locs: &Vec<String>, hidden: bool) -> io::Result<Vec<PathBuf
         let mut found = walk_dir(PathBuf::from(&loc), None, hidden)?;
         all.append(&mut found);
     }
-    return Ok(all);
+    Ok(all)
 }
 
 fn find(locs: &Vec<String>, name: String, hidden: bool) -> io::Result<Option<PathBuf>> {
     for loc in locs {
         let mut found = walk_dir(PathBuf::from(&loc), Some(PathBuf::from(&name)), hidden)?;
-        if found.len() > 0 {
+        if !found.is_empty() {
             return Ok(Some(found.remove(0)));
         }
     }
@@ -124,9 +124,9 @@ fn find(locs: &Vec<String>, name: String, hidden: bool) -> io::Result<Option<Pat
 
 fn walk_dir(dir: PathBuf, find: Option<PathBuf>, hidden: bool) -> io::Result<Vec<PathBuf>> {
     let mut found = Vec::new();
-    for dent in fs::read_dir(dir)? {
-        if let Ok(d) = dent {
-            if let Ok(m) = d.metadata() {
+    for d in (fs::read_dir(dir)?).flatten() {
+        match d.metadata() {
+            Ok(m) => {
                 if m.is_dir() && include_hidden(&d, hidden) {
                     if let Some(name) = &find {
                         if d.path().file_name().unwrap() == name {
@@ -137,14 +137,15 @@ fn walk_dir(dir: PathBuf, find: Option<PathBuf>, hidden: bool) -> io::Result<Vec
                         found.push(d.path());
                     }
                 }
-            } // TODO: else print warning
-        } // TODO: else print warning
+            }
+            Err(e) => eprintln!("ERROR: failed to read metadata for {:?}: {e}", d.path()),
+        }
     }
     Ok(found)
 }
 
 fn include_hidden(d: &fs::DirEntry, include: bool) -> bool {
-    return include || !d.file_name().to_string_lossy().starts_with(".");
+    include || !d.file_name().to_string_lossy().starts_with(".")
 }
 
 fn emit_shell(r: Option<PathBuf>) {
