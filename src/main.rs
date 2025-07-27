@@ -38,6 +38,12 @@ fn main() {
                 .help("Select project to load using fzf"),
         )
         .arg(
+            Arg::with_name("include-hidden")
+                .long("include-hidden")
+                .short("I")
+                .help("Include hidden directories"),
+        )
+        .arg(
             Arg::with_name("find")
                 .value_name("PROJECT-NAME")
                 .help("Name of the project to load"),
@@ -67,7 +73,7 @@ fn main() {
     }
 
     if args.is_present("list") {
-        load_all_projects(&locations)
+        load_all_projects(&locations, args.is_present("include-hidden"))
             .unwrap()
             .into_iter()
             .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
@@ -86,22 +92,29 @@ fn main() {
     }
 
     if let Some(proj) = args.value_of("find") {
-        emit_shell(find(&locations, proj.to_owned()).unwrap());
+        emit_shell(
+            find(
+                &locations,
+                proj.to_owned(),
+                args.is_present("include-hidden"),
+            )
+            .unwrap(),
+        );
     }
 }
 
-fn load_all_projects(locs: &Vec<String>) -> io::Result<Vec<PathBuf>> {
+fn load_all_projects(locs: &Vec<String>, hidden: bool) -> io::Result<Vec<PathBuf>> {
     let mut all = Vec::new();
     for loc in locs {
-        let mut found = walk_dir(PathBuf::from(&loc), None)?;
+        let mut found = walk_dir(PathBuf::from(&loc), None, hidden)?;
         all.append(&mut found);
     }
     return Ok(all);
 }
 
-fn find(locs: &Vec<String>, name: String) -> io::Result<Option<PathBuf>> {
+fn find(locs: &Vec<String>, name: String, hidden: bool) -> io::Result<Option<PathBuf>> {
     for loc in locs {
-        let mut found = walk_dir(PathBuf::from(&loc), Some(PathBuf::from(&name)))?;
+        let mut found = walk_dir(PathBuf::from(&loc), Some(PathBuf::from(&name)), hidden)?;
         if found.len() > 0 {
             return Ok(Some(found.remove(0)));
         }
@@ -109,12 +122,12 @@ fn find(locs: &Vec<String>, name: String) -> io::Result<Option<PathBuf>> {
     Ok(None)
 }
 
-fn walk_dir(dir: PathBuf, find: Option<PathBuf>) -> io::Result<Vec<PathBuf>> {
+fn walk_dir(dir: PathBuf, find: Option<PathBuf>, hidden: bool) -> io::Result<Vec<PathBuf>> {
     let mut found = Vec::new();
     for dent in fs::read_dir(dir)? {
         if let Ok(d) = dent {
             if let Ok(m) = d.metadata() {
-                if m.is_dir() {
+                if m.is_dir() && include_hidden(&d, hidden) {
                     if let Some(name) = &find {
                         if d.path().file_name().unwrap() == name {
                             found.push(d.path());
@@ -128,6 +141,10 @@ fn walk_dir(dir: PathBuf, find: Option<PathBuf>) -> io::Result<Vec<PathBuf>> {
         } // TODO: else print warning
     }
     Ok(found)
+}
+
+fn include_hidden(d: &fs::DirEntry, include: bool) -> bool {
+    return include || !d.file_name().to_string_lossy().starts_with(".");
 }
 
 fn emit_shell(r: Option<PathBuf>) {
