@@ -27,6 +27,7 @@ srcrr-$(VERSION).tgz: target/release/srcrr srcrr.bash LICENSE
 		--owner $(OWNER) \
 		--group $(GROUP) \
 		-czf ../srcrr-$(VERSION).tgz *
+	rm -r work
 
 DESTDIR	?= /usr/local
 
